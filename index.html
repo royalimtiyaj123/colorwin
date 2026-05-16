@@ -517,6 +517,8 @@ function clearLoginFields() {
         }, 1000);
     }
 
+	
+	
     function endRound() {
         gameActive = false;
         document.getElementById('timer').classList.remove('urgent');
@@ -653,6 +655,31 @@ function clearLoginFields() {
     }
 
     startRound();
+
+	// ==================== AUTO LOGIN CHECK ====================
+    // This runs when the app opens to see if you are already logged in
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            // User is signed in.
+            currentUser = user;
+            userPhoneGlobal = user.email; // Using email as identifier
+            
+            // Hide Login, Show Game
+            document.getElementById('loginScreen').classList.remove('active');
+            document.getElementById('gameScreen').classList.add('active');
+            document.getElementById('navGame').classList.add('active');
+            
+            // Load Balance
+            listenToBalance(currentUser.uid);
+            console.log("Auto-logged in as: " + user.email);
+        } else {
+            // User is signed out. Show Login Screen.
+            document.getElementById('loginScreen').classList.add('active');
+            document.getElementById('gameScreen').classList.remove('active');
+            console.log("No user logged in.");
+        }
+    });
+
 </script>
   </body>
 </html>
