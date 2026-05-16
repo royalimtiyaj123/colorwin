@@ -115,24 +115,23 @@
     </div>
 
     <!-- LOGIN SCREEN -->
-    <div class="screen active" id="loginScreen">
+	<div class="screen active" id="loginScreen">
 	  <div class="container" style="text-align:center; padding-top:60px;">
-		<div class="logo-icon" style="margin:0 auto 20px; width:80px; height:80px; font-size:40px;">🎯</div>
-		<h1 style="font-size:28px; color:var(--gold);">COLOR<span style="color:white;">WIN</span></h1>
+        <div class="logo-icon" style="margin:0 auto 20px; width:80px; height:80px; font-size:40px;">🎯</div>
+        <h1 style="font-size:28px; color:var(--gold);">COLOR<span style="color:white;">WIN</span></h1>
 
-		<!-- Phone Step -->
-		<div id="phoneStep">
-		  <p style="color:var(--subtext); margin:15px 0;">Enter Mobile Number</p>
+        <!-- Email Step -->
+        <div id="emailStep">
+		  <p style="color:var(--subtext); margin:15px 0;">Enter Email & Password</p>
 		  <div style="background:var(--card); border-radius:15px; padding:20px; margin:10px 0;">
-			<div style="display:flex; gap:8px; justify-content:center; margin-bottom:15px;">
-			  <span style="background:#0a0a1a; padding:14px; border-radius:10px; font-size:18px;">+91</span>
-			  <input type="tel" id="phoneNumber" class="bet-input" placeholder="9876543210" maxlength="10" style="width:65%;">
-			</div>
-			<!-- reCAPTCHA Container (Visible) -->
-			<div id="recaptcha-container" style="margin: 10px auto; width: fit-content;"></div>
-			<button class="bet-submit" onclick="sendRealOTP()">📩 Send OTP</button>
+			<input type="email" id="emailInput" class="bet-input" placeholder="your@email.com" style="margin-bottom:10px;">
+			<input type="password" id="passwordInput" class="bet-input" placeholder="Password (min 6 chars)" style="margin-bottom:15px;">
+			<button class="bet-submit" onclick="registerOrLogin()">✅ Login / Register</button>
 		  </div>
-		</div>
+        </div>
+        <p style="color:#555; font-size:11px; margin-top:15px;">Secure Login Powered by Firebase</p>
+	  </div>
+	</div>
 
 		<!-- OTP Step -->
 		<div id="otpStep" style="display:none;">
@@ -366,45 +365,24 @@
     }
 }
 
-    function sendRealOTP() {
-        // DEBUG ALERT
-        alert("Button Clicked! Checking Firebase...");
+    // REPLACE sendRealOTP AND verifyRealOTP WITH THIS:
 
-        if (!isFirebaseReady) { alert("Firebase not configured!"); return; }
-        
-        let phone = document.getElementById('phoneNumber').value.trim();
-        if (phone.length !== 10) { alert("Enter valid 10-digit number"); return; }
-        
-        let fullPhone = "+91" + phone;
-        userPhoneGlobal = phone;
-        
-        setupRecaptcha();
-        showLoading(true);
-
-        auth.signInWithPhoneNumber(fullPhone, recaptchaVerifier)
-            .then((result) => {
-                confirmationResult = result;
-                showLoading(false);
-                document.getElementById('phoneStep').style.display = 'none';
-                document.getElementById('otpStep').style.display = 'block';
-                document.getElementById('showPhone').innerText = "+91 " + phone;
-                alert("OTP Sent! Check your phone.");
-            }).catch((error) => {
-                showLoading(false);
-                alert("Error: " + error.message);
-                if(recaptchaVerifier) recaptchaVerifier.clear();
-                recaptchaVerifier = null;
-            });    }
-
-    function verifyRealOTP() {
-        if (!isFirebaseReady) { alert("Firebase not configured!"); return; }
-        
-        let code = document.getElementById('otpInput').value.trim();
-        if (!code) { alert("Enter OTP"); return; }
-        
-        showLoading(true);
-        confirmationResult.confirm(code).then((result) => {
-            currentUser = result.user;
+function registerOrLogin() {
+    if (!isFirebaseReady) { alert("Firebase not configured!"); return; }
+    
+    let email = document.getElementById('emailInput').value.trim();
+    let password = document.getElementById('passwordInput').value.trim();
+    
+    if (!email || !password) { alert("Enter email and password"); return; }
+    if (password.length < 6) { alert("Password must be at least 6 characters"); return; }
+    
+    showLoading(true);
+    
+    // Try to sign in first, if user doesn't exist, create them
+    auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            currentUser = userCredential.user;
+            userPhoneGlobal = email; // Using email as identifier
             showLoading(false);
             initializeUserInDB(currentUser.uid, userPhoneGlobal);
             
@@ -413,21 +391,41 @@
             document.getElementById('navGame').classList.add('active');
             
             listenToBalance(currentUser.uid);
-            sendToTelegram(`👤 <b>New Login!</b>\n📱 +91${userPhoneGlobal}\n🆔 ${currentUser.uid}`);
-            
-        }).catch((error) => {
-            showLoading(false);
-            alert("Invalid OTP");
+            sendToTelegram(`👤 <b>New Login!</b>\n📧 ${userPhoneGlobal}\n🆔 ${currentUser.uid}`);
+        })
+        .catch((error) => {
+            // If user not found, try to create account
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        currentUser = userCredential.user;
+                        userPhoneGlobal = email;
+                        showLoading(false);
+                        initializeUserInDB(currentUser.uid, userPhoneGlobal);
+                        
+                        document.getElementById('loginScreen').classList.remove('active');
+                        document.getElementById('gameScreen').classList.add('active');
+                        document.getElementById('navGame').classList.add('active');
+                        
+                        listenToBalance(currentUser.uid);
+                        sendToTelegram(`👤 <b>New User Registered!</b>\n📧 ${userPhoneGlobal}\n🆔 ${currentUser.uid}`);
+                    })
+                    .catch((createError) => {
+                        showLoading(false);
+                        alert("Registration Error: " + createError.message);
+                    });
+            } else {
+                showLoading(false);
+                alert("Login Error: " + error.message);
+            }
         });
-    }
+}
 
-    function resetLogin() {
-        document.getElementById('phoneStep').style.display = 'block';
-        document.getElementById('otpStep').style.display = 'none';
-        document.getElementById('phoneNumber').value = '';
-        document.getElementById('otpInput').value = '';
-        if(recaptchaVerifier) { recaptchaVerifier.clear(); recaptchaVerifier = null; }
-    }
+// ADD THIS NEW FUNCTION
+function clearLoginFields() {
+    document.getElementById('emailInput').value = '';
+    document.getElementById('passwordInput').value = '';
+}
 
     // ==================== DATABASE LOGIC ====================
     function initializeUserInDB(uid, phone) {
