@@ -366,7 +366,6 @@
 }
 
     // REPLACE sendRealOTP AND verifyRealOTP WITH THIS:
-
 function registerOrLogin() {
     if (!isFirebaseReady) { alert("Firebase not configured!"); return; }
     
@@ -378,12 +377,14 @@ function registerOrLogin() {
     
     showLoading(true);
     
-    // Try to sign in first, if user doesn't exist, create them
-    auth.signInWithEmailAndPassword(email, password)
+    // First, try to CREATE the user (Register)
+    auth.createUserWithEmailAndPassword(email, password)
         .then((userCredential) => {
+            // Success! New user created.
             currentUser = userCredential.user;
-            userPhoneGlobal = email; // Using email as identifier
+            userPhoneGlobal = email;
             showLoading(false);
+            
             initializeUserInDB(currentUser.uid, userPhoneGlobal);
             
             document.getElementById('loginScreen').classList.remove('active');
@@ -391,32 +392,31 @@ function registerOrLogin() {
             document.getElementById('navGame').classList.add('active');
             
             listenToBalance(currentUser.uid);
-            sendToTelegram(`👤 <b>New Login!</b>\n📧 ${userPhoneGlobal}\n🆔 ${currentUser.uid}`);
+            sendToTelegram(`👤 <b>New User Registered!</b>\n📧 ${userPhoneGlobal}\n🆔 ${currentUser.uid}`);
         })
         .catch((error) => {
-            // If user not found, try to create account
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                auth.createUserWithEmailAndPassword(email, password)
+            // If user already exists, try to LOG IN instead
+            if (error.code === 'auth/email-already-in-use') {
+                auth.signInWithEmailAndPassword(email, password)
                     .then((userCredential) => {
                         currentUser = userCredential.user;
                         userPhoneGlobal = email;
                         showLoading(false);
-                        initializeUserInDB(currentUser.uid, userPhoneGlobal);
                         
                         document.getElementById('loginScreen').classList.remove('active');
                         document.getElementById('gameScreen').classList.add('active');
                         document.getElementById('navGame').classList.add('active');
                         
                         listenToBalance(currentUser.uid);
-                        sendToTelegram(`👤 <b>New User Registered!</b>\n📧 ${userPhoneGlobal}\n🆔 ${currentUser.uid}`);
+                        sendToTelegram(`👤 <b>User Logged In!</b>\n📧 ${userPhoneGlobal}\n🆔 ${currentUser.uid}`);
                     })
-                    .catch((createError) => {
+                    .catch((loginError) => {
                         showLoading(false);
-                        alert("Registration Error: " + createError.message);
+                        alert("Wrong Password! Please try again.");
                     });
             } else {
                 showLoading(false);
-                alert("Login Error: " + error.message);
+                alert("Registration Error: " + error.message);
             }
         });
 }
