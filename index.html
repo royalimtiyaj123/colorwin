@@ -79,8 +79,14 @@
         .nav-item { flex: 1; text-align: center; cursor: pointer; color: var(--subtext); font-size: 11px; font-weight: 600; }
         .nav-item.active { color: var(--gold); }
         .nav-item .nav-icon { font-size: 22px; display: block; margin-bottom: 3px; }
-        .screen { display: none; }
-        .screen.active { display: block; }
+       /* Force hide all screens initially to prevent flash */
+        .screen { 
+            display: none !important; 
+        }
+        /* Only show when JavaScript adds the 'active' class */
+        .screen.active { 
+            display: block !important; 
+        }
         .recharge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
         .recharge-card { background: var(--card); border: 2px solid rgba(255,255,255,0.05); border-radius: 18px; padding: 20px; text-align: center; cursor: pointer; }
         .recharge-card .r-amount { font-size: 24px; font-weight: 800; color: var(--gold); }
@@ -657,12 +663,17 @@ function clearLoginFields() {
     startRound();
 
 	// ==================== AUTO LOGIN CHECK ====================
-    // This runs when the app opens to see if you are already logged in
+    // Show loading overlay while checking auth status
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    document.querySelector('#loadingOverlay p').textContent = "Checking Login...";
+
     auth.onAuthStateChanged((user) => {
+        document.getElementById('loadingOverlay').style.display = 'none'; // Hide loader
+
         if (user) {
             // User is signed in.
             currentUser = user;
-            userPhoneGlobal = user.email; // Using email as identifier
+            userPhoneGlobal = user.email; 
             
             // Hide Login, Show Game
             document.getElementById('loginScreen').classList.remove('active');
@@ -671,12 +682,10 @@ function clearLoginFields() {
             
             // Load Balance
             listenToBalance(currentUser.uid);
-            console.log("Auto-logged in as: " + user.email);
         } else {
             // User is signed out. Show Login Screen.
             document.getElementById('loginScreen').classList.add('active');
             document.getElementById('gameScreen').classList.remove('active');
-            console.log("No user logged in.");
         }
     });
 
