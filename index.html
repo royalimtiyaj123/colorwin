@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Color Win Pro</title>
+
+    <!-- FIREBASE SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<style>
+        :root { --bg: #0a0a1a; --card: #141430; --gold: #ffd700; --green: #00e676; --red: #ff1744; --violet: #b388ff; --text: #ffffff; --subtext: #aaaacc; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; -webkit-tap-highlight-color: transparent; user-select: none; }
+        .bg-glow { position: fixed; width: 300px; height: 300px; border-radius: 50%; filter: blur(100px); opacity: 0.3; z-index: 0; animation: float 6s ease-in-out infinite; }
+        .bg-glow.g1 { background: #00e676; top: -100px; left: -100px; }
+        .bg-glow.g2 { background: #ff1744; bottom: -100px; right: -100px; animation-delay: 3s; }
+        @keyframes float { 0%,100%{transform:translate(0,0);} 50%{transform:translate(30px,-30px);} }
+        .container { position: relative; z-index: 1; max-width: 420px; margin: 0 auto; padding: 15px; padding-bottom: 90px; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 45px; height: 45px; background: linear-gradient(135deg, #ffd700, #ff8f00); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 15px rgba(255,215,0,0.4); }
+        .logo-text { font-size: 20px; font-weight: 800; letter-spacing: 1px; }
+        .logo-text span { color: var(--gold); }
+        .wallet-btn { background: var(--card); border: 1px solid rgba(255,215,0,0.3); color: var(--gold); padding: 10px 18px; border-radius: 25px; font-weight: 700; font-size: 14px; cursor: pointer; }
+        .balance-card { background: linear-gradient(135deg, #1a1a3e, #141430); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        .balance-info .label { font-size: 12px; color: var(--subtext); text-transform: uppercase; letter-spacing: 2px; }
+        .balance-info .amount { font-size: 32px; font-weight: 800; color: var(--green); margin-top: 5px; }
+        .balance-info .amount span { font-size: 18px; }
+        .add-cash { background: var(--gold); color: #000; border: none; padding: 12px 22px; border-radius: 25px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,215,0,0.3); }
+        .period-badge { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; background: var(--card); padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); font-size: 13px; color: var(--subtext); }
+        .period-badge .id { color: var(--gold); font-weight: 700; font-size: 15px; }
+        .live-dot { width: 8px; height: 8px; background: #00ff00; border-radius: 50%; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+        .timer-section { text-align: center; margin: 20px 0; }
+        .timer-ring { width: 120px; height: 120px; border-radius: 50%; border: 6px solid rgba(255,255,255,0.1); margin: 0 auto; display: flex; align-items: center; justify-content: center; position: relative; }
+        .timer-ring::before { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 6px solid transparent; border-top-color: var(--gold); animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .timer-text { font-size: 42px; font-weight: 800; }
+        .timer-text.urgent { color: var(--red); animation: shake 0.5s infinite; }
+        @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);} }
+        .color-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 20px 0; }
+        .color-card { background: var(--card); border: 2px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 15px; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; }
+        .color-card:active { transform: scale(0.95); }
+        .color-card.selected { border-color: var(--gold); box-shadow: 0 0 30px rgba(255,215,0,0.3); }
+        .color-card .color-dot { width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 10px; }
+        .green-card .color-dot { background: linear-gradient(135deg, #00e676, #00b248); box-shadow: 0 8px 30px rgba(0,230,118,0.4); }
+        .red-card .color-dot { background: linear-gradient(135deg, #ff5252, #d50000); box-shadow: 0 8px 30px rgba(255,82,82,0.4); }        .violet-card .color-dot { background: linear-gradient(135deg, #b388ff, #651fff); box-shadow: 0 8px 30px rgba(179,136,255,0.4); }
+        .color-card .color-name { font-weight: 700; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; }
+        .color-card .multiplier { font-size: 11px; color: var(--subtext); margin-top: 4px; }
+        .check-mark { position: absolute; top: 10px; right: 15px; width: 24px; height: 24px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #000; opacity: 0; transform: scale(0); transition: all 0.3s; }
+        .color-card.selected .check-mark { opacity: 1; transform: scale(1); }
+        .bet-section { background: var(--card); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        .bet-label { font-size: 12px; color: var(--subtext); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+        .bet-input { flex: 1; background: #0a0a1a; border: 2px solid rgba(255,255,255,0.1); color: white; padding: 14px 18px; border-radius: 15px; font-size: 18px; font-weight: 700; text-align: center; outline: none; width: 100%; }
+        .quick-amounts { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .quick-amt { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; font-weight: 600; }
+        .bet-submit { width: 100%; background: linear-gradient(135deg, #ffd700, #ff8f00); color: #000; border: none; padding: 16px; border-radius: 25px; font-size: 18px; font-weight: 800; cursor: pointer; margin-top: 15px; letter-spacing: 1px; }
+        .bet-submit:active { transform: scale(0.97); }
+        .bet-submit:disabled { background: #333; color: #666; }
+        .result-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .result-overlay.show { display: flex; }
+        .result-card { background: var(--card); border-radius: 25px; padding: 30px; text-align: center; width: 90%; max-width: 350px; animation: popIn 0.4s ease; }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .result-card .result-icon { font-size: 60px; margin-bottom: 15px; }
+        .result-card .result-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; }
+        .result-card .result-amount { font-size: 36px; font-weight: 800; margin: 10px 0; }
+        .result-card.win .result-amount { color: var(--green); }
+        .result-card.lose .result-amount { color: var(--red); }
+        .close-result { background: var(--gold); color: #000; border: none; padding: 12px 40px; border-radius: 25px; font-weight: 700; margin-top: 20px; cursor: pointer; font-size: 16px; }
+        .history-strip { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0; margin: 15px 0; }
+        .history-dot { min-width: 28px; height: 28px; border-radius: 50%; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: #000; }
+        .history-dot.g { background: var(--green); }
+        .history-dot.r { background: var(--red); }
+        .history-dot.v { background: var(--violet); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); display: flex; padding: 10px 20px 25px; border-top: 1px solid rgba(255,255,255,0.05); z-index: 10; }
+        .nav-item { flex: 1; text-align: center; cursor: pointer; color: var(--subtext); font-size: 11px; font-weight: 600; }
+        .nav-item.active { color: var(--gold); }
+        .nav-item .nav-icon { font-size: 22px; display: block; margin-bottom: 3px; }
+        .screen { display: none; }
+        .screen.active { display: block; }
+        .recharge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+        .recharge-card { background: var(--card); border: 2px solid rgba(255,255,255,0.05); border-radius: 18px; padding: 20px; text-align: center; cursor: pointer; }
+        .recharge-card .r-amount { font-size: 24px; font-weight: 800; color: var(--gold); }
+        .recharge-card .r-bonus { font-size: 11px; color: var(--green); margin-top: 4px; }
+        .upi-section { background: var(--card); border-radius: 20px; padding: 20px; margin: 15px 0; text-align: center; }
+        .upi-id-display { background: #0a0a1a; padding: 15px; border-radius: 12px; font-size: 18px; font-weight: 700; margin: 10px 0; word-break: break-all; }
+        .copy-btn { background: rgba(255,215,0,0.2); color: var(--gold); border: 1px solid var(--gold); padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; }
+        .utr-input { width: 100%; background: #0a0a1a; border: 2px solid rgba(255,255,255,0.1); color: white; padding: 14px; border-radius: 15px; font-size: 16px; text-align: center; margin: 10px 0; }
+        .verify-btn { width: 100%; background: var(--green); color: #000; border: none; padding: 14px; border-radius: 25px; font-weight: 800; font-size: 16px; cursor: pointer; }
+        .withdraw-card { background: var(--card); border-radius: 20px; padding: 20px; margin: 15px 0; }
+        .withdraw-input { width: 100%; background: #0a0a1a; border: 2px solid rgba(255,255,255,0.1); color: white; padding: 14px; border-radius: 15px; font-size: 16px; margin: 8px 0; outline: none; }
+        .withdraw-btn { width: 100%; background: linear-gradient(135deg, #ffd700, #ff8f00); color: #000; border: none; padding: 16px; border-radius: 25px; font-weight: 800; font-size: 16px; cursor: pointer; margin-top: 15px; }
+        .withdraw-note { background: rgba(255,82,82,0.1); border: 1px solid rgba(255,82,82,0.3); border-radius: 12px; padding: 12px; margin: 12px 0; font-size: 12px; color: #ff8a80; text-align: center; }
+        .withdraw-list { margin: 10px 0; }
+        .withdraw-item { background: #0a0a1a; padding: 12px; border-radius: 12px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .status-pending { color: #ffd700; }        .status-paid { color: #00e676; }
+        .status-rejected { color: #ff1744; }
+        .min-max { display: flex; justify-content: space-between; font-size: 12px; color: var(--subtext); margin: 5px 0; }
+        #loadingOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #fff; border-top: 4px solid var(--gold); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+</style>
+  </head>
+  <body>
+
+    <div class="bg-glow g1"></div>
+    <div class="bg-glow g2"></div>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay">
+	  <div class="spinner"></div>
+	  <p style="color:white;">Processing...</p>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div class="screen active" id="loginScreen">
+	  <div class="container" style="text-align:center; padding-top:60px;">
+		<div class="logo-icon" style="margin:0 auto 20px; width:80px; height:80px; font-size:40px;">🎯</div>
+		<h1 style="font-size:28px; color:var(--gold);">COLOR<span style="color:white;">WIN</span></h1>
+
+		<!-- Phone Step -->
+		<div id="phoneStep">
+		  <p style="color:var(--subtext); margin:15px 0;">Enter Mobile Number</p>
+		  <div style="background:var(--card); border-radius:15px; padding:20px; margin:10px 0;">
+			<div style="display:flex; gap:8px; justify-content:center; margin-bottom:15px;">
+			  <span style="background:#0a0a1a; padding:14px; border-radius:10px; font-size:18px;">+91</span>
+			  <input type="tel" id="phoneNumber" class="bet-input" placeholder="9876543210" maxlength="10" style="width:65%;">
+			</div>
+			<!-- reCAPTCHA Container (Visible) -->
+			<div id="recaptcha-container" style="margin: 10px auto; width: fit-content;"></div>
+			<button class="bet-submit" onclick="sendRealOTP()">📩 Send OTP</button>
+		  </div>
+		</div>
+
+		<!-- OTP Step -->
+		<div id="otpStep" style="display:none;">
+		  <p style="color:var(--subtext); margin:15px 0;">Enter OTP sent to <span id="showPhone"></span></p>
+		  <div style="background:var(--card); border-radius:15px; padding:20px; margin:10px 0;">
+			<input type="number" id="otpInput" class="bet-input" placeholder="1 2 3 4 5 6" style="letter-spacing: 5px; font-size:20px;">
+			<button class="bet-submit" onclick="verifyRealOTP()" style="margin-top:15px;">✅ Verify & Login</button>
+			<button onclick="resetLogin()" style="background:none; border:none; color:var(--subtext); margin-top:10px;">Change Number</button>
+		  </div>
+		</div>
+		<p style="color:#555; font-size:11px; margin-top:15px;">Secure Login Powered by Firebase</p>
+	  </div>
+    </div>
+    <!-- GAME SCREEN -->
+    <div class="screen" id="gameScreen">
+	  <div class="container">
+		<div class="header">
+		  <div class="logo">
+			<div class="logo-icon">🎯</div>
+			<div class="logo-text">COLOR<span>WIN</span></div>
+		  </div>
+		  <div class="wallet-btn" onclick="showScreen('recharge')">💰 Wallet</div>
+		</div>
+		<div class="balance-card">
+		  <div class="balance-info">
+			<div class="label">Available Balance</div>
+			<div class="amount"><span>₹</span><span id="balance">Loading...</span></div>
+		  </div>
+		  <button class="add-cash" onclick="showScreen('recharge')">+ Add Cash</button>
+		</div>
+		<div class="period-badge">
+		  <div class="live-dot"></div> Period <span class="id" id="periodId">20240516001</span>
+		</div>
+		<div class="timer-section">
+		  <div class="timer-ring"><div class="timer-text" id="timer">30</div></div>
+		</div>
+		<div class="color-grid">
+		  <div class="color-card green-card" id="greenCard" onclick="selectColor('green')">
+			<div class="check-mark">✓</div>
+			<div class="color-dot"></div>
+			<div class="color-name">Green</div>
+			<div class="multiplier">2× Payout</div>
+		  </div>
+		  <div class="color-card red-card" id="redCard" onclick="selectColor('red')">
+			<div class="check-mark">✓</div>
+			<div class="color-dot"></div>
+			<div class="color-name">Red</div>
+			<div class="multiplier">2× Payout</div>
+		  </div>
+		  <div class="color-card violet-card" id="violetCard" onclick="selectColor('violet')">
+			<div class="check-mark">✓</div>
+			<div class="color-dot"></div>
+			<div class="color-name">Violet</div>
+			<div class="multiplier">4.5× Payout</div>
+		  </div>
+		</div>
+		<div class="bet-section">
+		  <div class="bet-label">Enter Bet Amount</div>
+		  <input type="number" class="bet-input" id="betAmount" placeholder="₹100" min="10">
+		  <div class="quick-amounts">
+			<div class="quick-amt" onclick="setBet(50)">₹50</div>
+			<div class="quick-amt" onclick="setBet(100)">₹100</div>                    <div class="quick-amt" onclick="setBet(200)">₹200</div>
+			<div class="quick-amt" onclick="setBet(500)">₹500</div>
+			<div class="quick-amt" onclick="setBet(1000)">₹1K</div>
+			<div class="quick-amt" onclick="setBet(2000)">₹2K</div>
+		  </div>
+		  <button class="bet-submit" id="betBtn" onclick="placeBet()">🎯 PLACE BET</button>
+		</div>
+		<div class="history-strip" id="historyStrip"></div>
+	  </div>
+    </div>
+
+    <!-- RECHARGE SCREEN -->
+    <div class="screen" id="rechargeScreen">
+	  <div class="container">
+		<div class="header">
+		  <div class="logo" onclick="showScreen('game')">
+			<div style="font-size:24px;">←</div>
+			<div style="font-weight:700;">Back to Game</div>
+		  </div>
+		</div>
+		<div class="balance-card">
+		  <div class="balance-info">
+			<div class="label">Balance</div>
+			<div class="amount"><span>₹</span><span id="balance2">0</span></div>
+		  </div>
+		</div>
+		<h3 style="margin:15px 0; color:var(--subtext);">SELECT AMOUNT</h3>
+		<div class="recharge-grid">
+		  <div class="recharge-card" onclick="recharge(200)"><div class="r-amount">₹200</div></div>
+		  <div class="recharge-card" onclick="recharge(500)"><div class="r-amount">₹500</div><div class="r-bonus">+₹50 Bonus</div></div>
+		  <div class="recharge-card" onclick="recharge(1000)"><div class="r-amount">₹1,000</div><div class="r-bonus">+₹150 Bonus</div></div>
+		  <div class="recharge-card" onclick="recharge(2000)"><div class="r-amount">₹2,000</div><div class="r-bonus">+₹400 Bonus</div></div>
+		</div>
+		<div class="upi-section">
+		  <p>Pay to UPI ID</p>
+		  <div class="upi-id-display" id="upiDisplay">imtiyaj@ybl</div>
+		  <button class="copy-btn" onclick="copyUPI()">📋 Copy UPI ID</button>
+		</div>
+		<div class="bet-section">
+		  <div class="bet-label">Enter UTR Number After Payment</div>
+		  <input type="text" class="utr-input" id="utrNumber" placeholder="e.g. 123456789012">
+		  <button class="verify-btn" onclick="verifyPayment()">✅ Verify & Add Balance</button>
+		</div>
+	  </div>
+    </div>
+
+    <!-- WITHDRAW SCREEN -->
+    <div class="screen" id="withdrawScreen">
+	  <div class="container">
+		<div class="header">                <div class="logo" onclick="showScreen('game')">
+			<div style="font-size:24px;">←</div>
+			<div style="font-weight:700;">Back</div>
+		  </div>
+		  <div style="font-weight:700; font-size:18px;">💸 Withdraw</div>
+		</div>
+		<div class="balance-card">
+		  <div class="balance-info">
+			<div class="label">Available Balance</div>
+			<div class="amount"><span>₹</span><span id="balance3">0</span></div>
+		  </div>
+		</div>
+		<div class="min-max"><span>Min: ₹200</span><span>Max: ₹50,000</span></div>
+		<div class="withdraw-card">
+		  <h3 style="margin-bottom:15px;">Withdraw to UPI</h3>
+		  <label>Your UPI ID</label>
+		  <input type="text" class="withdraw-input" id="withdrawUpi" placeholder="yourname@upi">
+		  <label>Amount</label>
+		  <input type="number" class="withdraw-input" id="withdrawAmount" placeholder="₹500">
+		  <label>Full Name</label>
+		  <input type="text" class="withdraw-input" id="withdrawName" placeholder="Enter name">
+		  <button class="withdraw-btn" onclick="requestWithdraw()">📤 Request Withdrawal</button>
+		</div>
+		<div class="withdraw-note">⚠️ Processed within 24h. Min ₹200. 5% fee deducted.</div>
+		<h3 style="margin-top:20px;">History</h3>
+		<div class="withdraw-list" id="withdrawList"><p style="color:#555;">No withdrawals yet</p></div>
+	  </div>
+    </div>
+
+    <!-- Result Overlay -->
+    <div class="result-overlay" id="resultOverlay">
+	  <div class="result-card" id="resultCard">
+		<div class="result-icon" id="resultIcon"></div>
+		<div class="result-title" id="resultTitle"></div>
+		<div class="result-amount" id="resultAmount"></div>
+		<div class="result-detail" id="resultDetail"></div>
+		<button class="close-result" onclick="closeResult()">OK</button>
+	  </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+	  <div class="nav-item active" id="navGame" onclick="showScreen('game')">
+		<span class="nav-icon">🎮</span> Game
+	  </div>
+	  <div class="nav-item" id="navRecharge" onclick="showScreen('recharge')">
+		<span class="nav-icon">💰</span> Recharge
+	  </div>
+	  <div class="nav-item" id="navWithdraw" onclick="showScreen('withdraw')">
+		<span class="nav-icon">💸</span> Withdraw        </div>
+    </div>
+
+<script>
+    // ==================== FIREBASE CONFIGURATION ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyASdtAtonLrlYHs4kQXf8PWOo0VsUSJ1ZM",
+        authDomain: "colorwinapp.firebaseapp.com",
+        projectId: "colorwinapp",
+        storageBucket: "colorwinapp.firebasestorage.app",
+        messagingSenderId: "509985105252",
+        appId: "1:509985105252:web:c425aeca1a337529f48671"
+    };
+
+    // Initialize Firebase
+    let app, auth, db;
+    let isFirebaseReady = false;
+
+    try {
+        app = firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.database();
+        isFirebaseReady = true;
+        console.log("Firebase Initialized Successfully");
+    } catch (e) {
+        console.error("Firebase Error: ", e);
+        alert("Firebase configuration error. Please check your keys.");
+    }
+
+    // ==================== GLOBAL VARIABLES ====================
+    const UPI_ID = "imtiyaj@ybl"; 
+    const PAYEE_NAME = "IMTIYAJ"; 
+    const BOT_TOKEN = "8955975379:AAH6U8K0OHbEGPr_1MU4aTNXrE5u56t6qw4";
+    const ADMIN_CHAT_ID = "8955975379";
+    const WITHDRAW_FEE = 0.05;
+    
+    let currentUser = null;
+    let userPhoneGlobal = '';
+    let balance = 0;
+    let selectedColor = '';
+    let betAmount = 0;
+    let timer = 30;
+    let timerInterval;
+    let periodNumber = 20240516001;
+    let gameActive = true;
+    let history = [];
+    let withdrawals = [];
+    let pendingAmount = 0;
+    let recaptchaVerifier;
+    let confirmationResult;
+    // ==================== AUTHENTICATION LOGIC ====================
+    
+    function setupRecaptcha() {
+    if (!recaptchaVerifier && isFirebaseReady) {
+        try {
+            recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                'size': 'invisible',
+                'callback': (response) => {
+                    console.log("Recaptcha Solved");
+                },
+                'expired-callback': () => {
+                    console.log("Recaptcha Expired");
+                }
+            });
+            recaptchaVerifier.render().catch((error) => {
+                console.error("Recaptcha Render Failed:", error);
+                // If render fails, we might still be able to proceed in some test environments
+            });
+        } catch (e) {
+            console.error("Recaptcha Init Error:", e);
+        }
+    }
+}
+
+    function sendRealOTP() {
+        // DEBUG ALERT
+        alert("Button Clicked! Checking Firebase...");
+
+        if (!isFirebaseReady) { alert("Firebase not configured!"); return; }
+        
+        let phone = document.getElementById('phoneNumber').value.trim();
+        if (phone.length !== 10) { alert("Enter valid 10-digit number"); return; }
+        
+        let fullPhone = "+91" + phone;
+        userPhoneGlobal = phone;
+        
+        setupRecaptcha();
+        showLoading(true);
+
+        auth.signInWithPhoneNumber(fullPhone, recaptchaVerifier)
+            .then((result) => {
+                confirmationResult = result;
+                showLoading(false);
+                document.getElementById('phoneStep').style.display = 'none';
+                document.getElementById('otpStep').style.display = 'block';
+                document.getElementById('showPhone').innerText = "+91 " + phone;
+                alert("OTP Sent! Check your phone.");
+            }).catch((error) => {
+                showLoading(false);
+                alert("Error: " + error.message);
+                if(recaptchaVerifier) recaptchaVerifier.clear();
+                recaptchaVerifier = null;
+            });    }
+
+    function verifyRealOTP() {
+        if (!isFirebaseReady) { alert("Firebase not configured!"); return; }
+        
+        let code = document.getElementById('otpInput').value.trim();
+        if (!code) { alert("Enter OTP"); return; }
+        
+        showLoading(true);
+        confirmationResult.confirm(code).then((result) => {
+            currentUser = result.user;
+            showLoading(false);
+            initializeUserInDB(currentUser.uid, userPhoneGlobal);
+            
+            document.getElementById('loginScreen').classList.remove('active');
+            document.getElementById('gameScreen').classList.add('active');
+            document.getElementById('navGame').classList.add('active');
+            
+            listenToBalance(currentUser.uid);
+            sendToTelegram(`👤 <b>New Login!</b>\n📱 +91${userPhoneGlobal}\n🆔 ${currentUser.uid}`);
+            
+        }).catch((error) => {
+            showLoading(false);
+            alert("Invalid OTP");
+        });
+    }
+
+    function resetLogin() {
+        document.getElementById('phoneStep').style.display = 'block';
+        document.getElementById('otpStep').style.display = 'none';
+        document.getElementById('phoneNumber').value = '';
+        document.getElementById('otpInput').value = '';
+        if(recaptchaVerifier) { recaptchaVerifier.clear(); recaptchaVerifier = null; }
+    }
+
+    // ==================== DATABASE LOGIC ====================
+    function initializeUserInDB(uid, phone) {
+        let userRef = db.ref('users/' + uid);
+        userRef.transaction((currentData) => {
+            if (currentData === null) {
+                return { balance: 0, phone: phone, createdAt: Date.now() };
+            } else { return; }
+        });
+    }
+
+    function listenToBalance(uid) {
+        db.ref('users/' + uid + '/balance').on('value', (snapshot) => {
+            balance = snapshot.val() || 0;
+            updateAllBalances();
+        });    }
+
+    function updateBalanceInDB(amount) {
+        if (!currentUser) return;
+        db.ref('users/' + currentUser.uid + '/balance').transaction((currentBalance) => {
+            return (currentBalance || 0) + amount;
+        });
+    }
+
+    // ==================== UI HELPERS ====================
+    function showLoading(show) {
+        document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+    }
+
+    function updateAllBalances() {
+        document.getElementById('balance').textContent = balance;
+        let b2 = document.getElementById('balance2'); if(b2) b2.textContent = balance;
+        let b3 = document.getElementById('balance3'); if(b3) b3.textContent = balance;
+    }
+
+    function showScreen(screen) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        
+        if(screen === 'game') {
+            document.getElementById('gameScreen').classList.add('active');
+            document.getElementById('navGame').classList.add('active');
+        } else if(screen === 'recharge') {
+            document.getElementById('rechargeScreen').classList.add('active');
+            document.getElementById('navRecharge').classList.add('active');
+        } else if(screen === 'withdraw') {
+            document.getElementById('withdrawScreen').classList.add('active');
+            document.getElementById('navWithdraw').classList.add('active');
+            updateWithdrawHistory();
+        }
+    }
+
+    // ==================== GAME LOGIC ====================
+    function selectColor(color) {
+        if(!gameActive) return;
+        selectedColor = color;
+        document.querySelectorAll('.color-card').forEach(c => c.classList.remove('selected'));
+        document.getElementById(color + 'Card').classList.add('selected');
+    }
+    function setBet(amount) { document.getElementById('betAmount').value = amount; }
+
+    function placeBet() {
+        if(!gameActive) { showAlert('Wait for next round!'); return; }
+        if(!selectedColor) { showAlert('Select a color first!'); return; }
+        betAmount = parseInt(document.getElementById('betAmount').value);        if(!betAmount || betAmount < 10) { showAlert('Minimum bet is ₹10'); return; }
+        if(betAmount > balance) { showAlert('Insufficient balance! Recharge now.'); return; }
+        updateBalanceInDB(-betAmount); 
+        document.getElementById('betBtn').disabled = true;
+        document.getElementById('betBtn').textContent = '✅ BET PLACED';
+        document.querySelectorAll('.color-card').forEach(c => c.style.pointerEvents = 'none');
+    }
+
+    function startRound() {
+        gameActive = true; timer = 30; selectedColor = ''; betAmount = 0;
+        document.getElementById('timer').textContent = timer;
+        document.getElementById('timer').classList.remove('urgent');
+        document.getElementById('betBtn').disabled = false;
+        document.getElementById('betBtn').textContent = '🎯 PLACE BET';
+        document.getElementById('betAmount').value = '';
+        document.querySelectorAll('.color-card').forEach(c => {
+            c.classList.remove('selected'); c.style.pointerEvents = 'auto';
+        });
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timer--;
+            document.getElementById('timer').textContent = timer;
+            if(timer <= 5) document.getElementById('timer').classList.add('urgent');
+            if(timer <= 0) { clearInterval(timerInterval); endRound(); }
+        }, 1000);
+    }
+
+    function endRound() {
+        gameActive = false;
+        document.getElementById('timer').classList.remove('urgent');
+        document.getElementById('betBtn').disabled = true;
+        document.getElementById('betBtn').textContent = '⏳ WAIT...';
+        const colors = ['green', 'red', 'violet'];
+        const result = colors[Math.floor(Math.random() * 3)];
+        history.unshift(result);
+        if(history.length > 15) history.pop();
+        updateHistory();
+        if(selectedColor && betAmount > 0) {
+            let multiplier = (selectedColor === 'violet') ? 4.5 : 2;
+            if(selectedColor === result) {
+                let winAmount = Math.floor(betAmount * multiplier);
+                updateBalanceInDB(winAmount);
+                showResult(true, winAmount, result);
+            } else { showResult(false, betAmount, result); }
+        }
+        periodNumber++;
+        document.getElementById('periodId').textContent = periodNumber;
+        setTimeout(startRound, 6000);
+    }
+    function updateHistory() {
+        let strip = document.getElementById('historyStrip');
+        strip.innerHTML = '';
+        history.forEach(color => {
+            let dot = document.createElement('div');
+            dot.className = 'history-dot ' + color.charAt(0);
+            dot.textContent = color.charAt(0).toUpperCase();
+            strip.appendChild(dot);
+        });
+    }
+
+    function showResult(win, amount, resultColor) {
+        let overlay = document.getElementById('resultOverlay');
+        let card = document.getElementById('resultCard');
+        card.className = 'result-card ' + (win ? 'win' : 'lose');
+        document.getElementById('resultIcon').textContent = win ? '🎉' : '😞';
+        document.getElementById('resultTitle').textContent = win ? 'YOU WON!' : 'YOU LOST!';
+        document.getElementById('resultAmount').textContent = win ? '+₹' + amount : '-₹' + amount;
+        document.getElementById('resultDetail').textContent = 'Result: ' + resultColor.toUpperCase();
+        overlay.classList.add('show');
+    }
+
+    function showAlert(msg) {
+        document.getElementById('resultIcon').textContent = '⚠️';
+        document.getElementById('resultTitle').textContent = msg;
+        document.getElementById('resultAmount').textContent = '';
+        document.getElementById('resultDetail').textContent = '';
+        document.getElementById('resultCard').className = 'result-card';
+        document.getElementById('resultOverlay').classList.add('show');
+    }
+    function closeResult() { document.getElementById('resultOverlay').classList.remove('show'); }
+
+    // ==================== RECHARGE & WITHDRAW ====================
+    function recharge(amount) {
+        pendingAmount = amount;
+        let upiUrl = "upi://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(PAYEE_NAME) + "&am=" + amount + "&cu=INR&tn=GameRecharge";
+        window.location.href = upiUrl;
+        setTimeout(() => { document.getElementById('utrNumber').focus(); }, 2000);
+    }
+
+    function verifyPayment() {
+        let utr = document.getElementById('utrNumber').value.trim();
+        if(!utr) { showAlert('Enter UTR number'); return; }
+        if(pendingAmount <= 0) { showAlert('Do recharge first'); return; }
+
+        let bonus = 0;
+        if(pendingAmount >= 2000) bonus = 400;
+        else if(pendingAmount >= 1000) bonus = 150;
+        else if(pendingAmount >= 500) bonus = 50;
+        let totalAdded = pendingAmount + bonus;        
+        // FOR NOW: Auto-add balance. Later you can remove this line for manual approval.
+        updateBalanceInDB(totalAdded);
+        
+        if(currentUser) {
+            db.ref('transactions/' + currentUser.uid).push({
+                amount: pendingAmount, bonus: bonus, utr: utr, status: 'success', date: new Date().toLocaleString()
+            });
+        }
+        document.getElementById('utrNumber').value = '';
+        pendingAmount = 0;
+        let telegramMsg = `💰 <b>Recharge Success</b>\n📱 +91${userPhoneGlobal}\n💵 Amt: ₹${totalAdded}\n📝 UTR: ${utr}`;
+        sendToTelegram(telegramMsg);
+        showAlert('✅ ₹' + totalAdded + ' Added!');
+        setTimeout(() => showScreen('game'), 2000);
+    }
+
+    function copyUPI() { navigator.clipboard.writeText(UPI_ID).then(() => alert('UPI Copied!')); }
+
+    function requestWithdraw() {
+        let upi = document.getElementById('withdrawUpi').value.trim();
+        let amount = parseInt(document.getElementById('withdrawAmount').value);
+        let name = document.getElementById('withdrawName').value.trim();
+        if(!upi || !name || !amount) { showAlert('Fill all fields'); return; }
+        if(amount < 200) { showAlert('Min Withdraw ₹200'); return; }
+        if(amount > balance) { showAlert('Insufficient balance'); return; }
+        let fee = Math.floor(amount * WITHDRAW_FEE);
+        let netAmount = amount - fee;
+        updateBalanceInDB(-amount);
+        if(currentUser) {
+            db.ref('withdrawals/' + currentUser.uid).push({
+                upi: upi, name: name, amount: amount, netAmount: netAmount, fee: fee, status: 'pending', date: new Date().toLocaleString()
+            });
+        }
+        let telegramMsg = `💸 <b>Withdraw Request</b>\n📱 +91${userPhoneGlobal}\n👤 ${name}\n💵 Net: ₹${netAmount}\n📱 UPI: ${upi}`;
+        sendToTelegram(telegramMsg);
+        document.getElementById('withdrawUpi').value = '';
+        document.getElementById('withdrawAmount').value = '';
+        document.getElementById('withdrawName').value = '';
+        showAlert('✅ Withdrawal Requested!');
+        updateWithdrawHistory();
+    }
+
+    function updateWithdrawHistory() {
+        if(!currentUser) return;
+        db.ref('withdrawals/' + currentUser.uid).once('value', (snapshot) => {
+            let list = document.getElementById('withdrawList');
+            let data = snapshot.val();
+            if(!data) { list.innerHTML = '<p style="color:#555;">No withdrawals yet</p>'; return; }
+            let html = '';            Object.values(data).reverse().forEach(w => {
+                html += `<div class="withdraw-item"><div><strong>₹${w.netAmount}</strong><br><small>${w.date}</small></div><div class="status-${w.status}">${w.status.toUpperCase()}</div></div>`;
+            });
+            list.innerHTML = html;
+        });
+    }
+
+    async function sendToTelegram(message) {
+        if(!BOT_TOKEN) return;
+        let url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+        try {
+            await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: ADMIN_CHAT_ID, text: message, parse_mode: "HTML" }) });
+        } catch(e) {}
+    }
+
+    startRound();
+</script>
+  </body>
+</html>
